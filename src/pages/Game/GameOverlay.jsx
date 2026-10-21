@@ -13,7 +13,7 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
-import { SPEED_INCREMENT } from "@/game/constants";
+import { LIFE_BONUS, SPEED_INCREMENT } from "@/game/constants";
 
 const primaryButton =
   "inline-flex items-center gap-2 px-7 py-3 text-white rounded-full font-semibold transition-all hover:scale-105 active:scale-95";
@@ -112,7 +112,7 @@ export default function GameOverlay({ hud, actions }) {
             Game Over!
           </Title>
           <p className="text-2xl">Final score: {hud.score.toLocaleString()}</p>
-          <p className="text-lg text-gray-300">Max combo: {hud.maxCombo}x</p>
+          <p className="text-lg text-gray-300">Best combo: {hud.maxCombo} bricks</p>
           <div className="flex flex-wrap gap-3 justify-center pt-3">
             <button
               onClick={actions.restart}
@@ -137,6 +137,12 @@ export default function GameOverlay({ hud, actions }) {
           </Title>
           <Stars count={hud.stars} />
           <p className="text-xl">Score: {hud.score.toLocaleString()}</p>
+          {hud.levelBonus > 0 && (
+            <p className="text-green-300">
+              Life bonus: +{hud.levelBonus.toLocaleString()} ({hud.lives} x{" "}
+              {LIFE_BONUS.toLocaleString()})
+            </p>
+          )}
           <p className="inline-flex items-center gap-1.5 text-lg text-yellow-400">
             Coins earned: {hud.coins} <Coins size={18} aria-hidden="true" />
           </p>

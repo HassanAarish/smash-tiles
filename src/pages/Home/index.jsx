@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PowerUpIcon } from "@/components";
 import { POWER_UPS } from "@/game/powerUps";
+import { selectTotalScore, selectUnlockedLevel, usePlayerStore } from "@/store/playerStore";
 
 const TABS = [
   { id: "menu", label: "Game Menu", icon: Gamepad2 },
@@ -27,20 +28,15 @@ const TABS = [
 const Home = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("menu");
-  const [playerStats, setPlayerStats] = useState({
-    totalScore: 0,
-    totalCoins: 500,
-    currentLevel: 1,
-    highestLevel: 1,
-    lives: 3,
-  });
 
-  const [levelProgress] = useState({
-    completed: new Set([]),
-    stars: new Map(),
-  });
-
-  const [purchasedPowerUps, setPurchasedPowerUps] = useState(new Set());
+  // Saved player progress (see @/store/playerStore)
+  const coins = usePlayerStore((state) => state.coins);
+  const highestCompleted = usePlayerStore((state) => state.highestCompleted);
+  const levelResults = usePlayerStore((state) => state.levels);
+  const inventory = usePlayerStore((state) => state.inventory);
+  const buyPowerUp = usePlayerStore((state) => state.buyPowerUp);
+  const totalScore = usePlayerStore(selectTotalScore);
+  const unlockedLevel = usePlayerStore(selectUnlockedLevel);
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -56,9 +52,10 @@ const Home = () => {
     const levels = [];
     for (let i = 0; i < 25; i++) {
       const levelNum = startLevel + i;
-      const isCompleted = levelProgress.completed.has(levelNum);
-      const stars = levelProgress.stars.get(levelNum) || 0;
-      const isLocked = levelNum > playerStats.highestLevel + 1;
+      const result = levelResults[levelNum];
+      const isCompleted = Boolean(result);
+      const stars = result?.stars ?? 0;
+      const isLocked = levelNum > unlockedLevel;
 
       levels.push({
         number: levelNum,
@@ -70,25 +67,14 @@ const Home = () => {
     return levels;
   };
 
-  const currentLevelGroup = Math.floor((playerStats.currentLevel - 1) / 25) + 1;
+  const currentLevelGroup = Math.floor((unlockedLevel - 1) / 25) + 1;
   const levelGrid = generateLevelGrid((currentLevelGroup - 1) * 25 + 1);
 
   // Handle level selection
   const handleLevelSelect = (level) => {
-    if (level <= playerStats.highestLevel + 1) {
+    if (level <= unlockedLevel) {
       // Navigate to game with selected level
       navigate(`/game?level=${level}`);
-    }
-  };
-
-  // Handle power-up purchase
-  const handlePurchasePowerUp = (powerUpId, price) => {
-    if (playerStats.totalCoins >= price) {
-      setPlayerStats((prev) => ({
-        ...prev,
-        totalCoins: prev.totalCoins - price,
-      }));
-      setPurchasedPowerUps((prev) => new Set([...prev, powerUpId]));
     }
   };
 
@@ -113,20 +99,18 @@ const Home = () => {
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Total Score</p>
                 <p className="text-lg sm:text-2xl font-bold text-white">
-                  {playerStats.totalScore.toLocaleString()}
+                  {totalScore.toLocaleString()}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Coins</p>
                 <p className="inline-flex items-center gap-1.5 text-lg sm:text-2xl font-bold text-yellow-400">
-                  {playerStats.totalCoins} <Coins className="size-[0.9em]" aria-hidden="true" />
+                  {coins} <Coins className="size-[0.9em]" aria-hidden="true" />
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-gray-400 text-sm">Highest Level</p>
-                <p className="text-lg sm:text-2xl font-bold text-green-400">
-                  {playerStats.highestLevel}
-                </p>
+                <p className="text-gray-400 text-sm">Levels Cleared</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-400">{highestCompleted}</p>
               </div>
             </div>
           </div>
@@ -169,7 +153,7 @@ const Home = () => {
                   <div>
                     <p className="text-gray-300">Current Progress</p>
                     <p className="text-2xl font-bold text-white">
-                      Level {playerStats.currentLevel} - Group {currentLevelGroup}
+                      Level {unlockedLevel} - Group {currentLevelGroup}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -189,7 +173,7 @@ const Home = () => {
                   <div
                     className="bg-linear-to-r from-green-500 to-emerald-500 h-4 rounded-full transition-all"
                     style={{
-                      width: `${(playerStats.currentLevel % 25 || 25) * 4}%`,
+                      width: `${(Math.max(0, highestCompleted - (currentLevelGroup - 1) * 25) / 25) * 100}%`,
                     }}
                   />
                 </div>
@@ -250,7 +234,7 @@ const Home = () => {
                   Previous Group
                 </button>
                 <button
-                  onClick={() => handleLevelSelect(playerStats.currentLevel)}
+                  onClick={() => handleLevelSelect(unlockedLevel)}
                   className="inline-flex items-center gap-2 px-8 py-4 bg-linear-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg"
                 >
                   <Play size={20} aria-hidden="true" className="fill-current" />
@@ -291,10 +275,14 @@ const Home = () => {
         {/* Shop Tab */}
         {activeTab === "shop" && (
           <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 sm:p-8">
-            <h2 className="text-3xl font-bold text-white mb-6">Power-Up Shop</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">Power-Up Shop</h2>
+            <p className="text-gray-300 mb-6">
+              Buy power-ups with coins, then use them any time during a level.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {POWER_UPS.map((powerUp) => {
-                const isPurchased = purchasedPowerUps.has(powerUp.id);
+                const owned = inventory[powerUp.id] ?? 0;
+                const canAfford = coins >= powerUp.price;
                 return (
                   <div key={powerUp.id} className="bg-black/30 rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -309,34 +297,33 @@ const Home = () => {
                           <p className="text-gray-300 text-sm">{powerUp.description}</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p className="inline-flex items-center gap-1.5 text-2xl font-bold text-yellow-400">
                           {powerUp.price} <Coins size={20} aria-hidden="true" />
                         </p>
+                        {owned > 0 && (
+                          <p className="inline-flex items-center justify-end gap-1 w-full text-sm text-green-400">
+                            <CircleCheck size={14} aria-hidden="true" /> Owned: {owned}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
-                      onClick={() => handlePurchasePowerUp(powerUp.id, powerUp.price)}
-                      disabled={isPurchased || playerStats.totalCoins < powerUp.price}
+                      onClick={() => buyPowerUp(powerUp.id)}
+                      disabled={!canAfford}
                       className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        isPurchased
-                          ? "bg-green-600/30 text-green-400 cursor-not-allowed"
-                          : playerStats.totalCoins < powerUp.price
-                            ? "bg-gray-600/30 text-gray-500 cursor-not-allowed"
-                            : `bg-linear-to-r ${powerUp.color} text-white hover:shadow-lg transform hover:scale-105`
+                        canAfford
+                          ? `bg-linear-to-r ${powerUp.color} text-white hover:shadow-lg transform hover:scale-105 active:scale-95`
+                          : "bg-gray-600/30 text-gray-500 cursor-not-allowed"
                       }`}
                     >
-                      {isPurchased ? (
-                        <>
-                          <CircleCheck size={18} aria-hidden="true" /> Purchased
-                        </>
-                      ) : playerStats.totalCoins < powerUp.price ? (
+                      {!canAfford ? (
                         <>
                           <Lock size={18} aria-hidden="true" /> Insufficient Coins
                         </>
                       ) : (
                         <>
-                          <ShoppingCart size={18} aria-hidden="true" /> Purchase
+                          <ShoppingCart size={18} aria-hidden="true" /> Buy
                         </>
                       )}
                     </button>

@@ -2,7 +2,7 @@
 
 A modern Breakout-style brick breaker for the web and Android. Break every tile with the ball, catch falling power-ups, and keep your combo alive as the ball speeds up with every hit.
 
-> **Status: in development.** The core game is playable in the browser. Saved progress, accounts, the online leaderboard and the Android app are still being built (see [Roadmap](#roadmap)).
+> **Status: in development.** The game is playable in the browser, and progress is saved on the device. Accounts, the online leaderboard and the Android app are still being built (see [Roadmap](#roadmap)).
 
 ## Features
 
@@ -13,6 +13,8 @@ A modern Breakout-style brick breaker for the web and Android. Break every tile 
 - Six power-ups: Multi-Ball, Wide Paddle, Slow Motion, Sticky Paddle, Extra Life, Coin Rush
 - Five brick patterns, tougher bricks on later levels, and teleport portals from level 3
 - Combo scoring, coins, a 3-star rating per level, and a speed boost of 1.5% per brick hit
+- Progress saved on the device: coins, unlocked levels, best score and stars per level
+- Shop: spend coins on power-ups, then use them during a level from the in-game inventory
 - Responsive layout: compact top bar on phones, stats panel on desktop
 - Lazy-loaded pages that cope with flaky connections, plus an error screen instead of a blank page
 - Self-hosted font (Fredoka) and icons ([Lucide](https://lucide.dev)), with no third-party requests at runtime
@@ -26,12 +28,26 @@ A modern Breakout-style brick breaker for the web and Android. Break every tile 
 | Start | Tap the start screen | Space or Enter |
 | Pause / resume | Pause button | P or Esc |
 
+## Scoring
+
+| Event | Points |
+|---|---|
+| Break a brick | 100 × brick toughness (1–3 hits) × combo multiplier |
+| Hit a tough brick without breaking it | 10 |
+| Clear a level | 1,000 per life left |
+
+- **Combo:** every brick you break before the ball touches the paddle again raises the multiplier (x1, x2, x3 … up to **x10**). A paddle hit or a lost ball resets it, so long rallies off the walls and bricks pay the most.
+- **Stars:** 3 stars for clearing a level with 3 or more lives left, 2 with two, 1 with one.
+- **Coins:** 10 per brick broken, plus Coin Rush power-ups. Spend them in the shop.
+- **Total score** on the Home screen is the sum of your best score on each level, so replaying a level only counts if you beat your best.
+
 ## Tech stack
 
 - [React 19](https://react.dev) + [Vite 8](https://vite.dev), plain JavaScript (JSX)
 - [Tailwind CSS v4](https://tailwindcss.com) via `@tailwindcss/vite`
 - [React Router 8](https://reactrouter.com) (`HashRouter`)
 - HTML5 Canvas game engine with no game framework
+- [Zustand](https://zustand.docs.pmnd.rs) for saved player progress
 - [Lucide](https://lucide.dev) icons, [Fontsource](https://fontsource.org) Fredoka font
 - ESLint 10 + Prettier
 
@@ -75,6 +91,7 @@ src/
 ├── pages/
 │   ├── Home/             # Menu: level select, power-ups, shop, leaderboard
 │   └── Game/             # Game screen: canvas, HUD, overlays
+├── store/                # Player progress (Zustand, saved on the device)
 ├── config/routes/        # Route registry + router (lazy-loaded pages)
 ├── components/common/    # ErrorBoundary, RouteFallback, PowerUpIcon
 ├── hooks/                # useOnlineStatus
@@ -98,7 +115,7 @@ src/
 
 ## Roadmap
 
-1. **Finish the game:** saved player progress (coins, unlocked levels, stars, purchases), more levels and special bricks, sound and haptics, settings, and a tutorial
+1. **Finish the game:** ~~saved player progress~~ (done), more levels and special bricks, sound and haptics, settings, and a tutorial
 2. **Backend (Firebase):** accounts, cloud saves synced across web and Android, a real leaderboard, server-side validation of scores and coins
 3. **Android app (Capacitor):** native packaging, ads and in-app purchases
 4. **Release:** web hosting and Google Play Store

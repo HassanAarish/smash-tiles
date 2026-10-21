@@ -39,7 +39,13 @@ export const BRICK_WIDTH =
   (WORLD_WIDTH - BRICK_SIDE_MARGIN * 2 - BRICK_GAP * (BRICK_COLS - 1)) / BRICK_COLS;
 export const BRICK_COLORS = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57", "#ff9ff3"];
 
+// Scoring. Breaking a brick scores BRICK_SCORE x its toughness (hits it takes) x the
+// combo multiplier. The combo counts bricks broken since the ball last touched the
+// paddle, so it resets on every paddle hit or lost ball.
 export const BRICK_SCORE = 100;
+export const BRICK_DAMAGE_SCORE = 10; // hitting a tough brick without breaking it
+export const MAX_COMBO_MULTIPLIER = 10;
+export const LIFE_BONUS = 1000; // per life left when a level is cleared
 export const BRICK_COINS = 10;
 
 export const POWER_UP_DROP_CHANCE = 0.15;

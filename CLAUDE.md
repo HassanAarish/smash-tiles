@@ -46,11 +46,18 @@ There are two layers: a framework-free game engine in `src/game/` and React page
 - **Routes are lazy-loaded.** `src/config/routes/registry.jsx` is the only list of pages: `/` is Home and `/game?level=N` is Game. Each page loads through `lazyRoute` (`src/utils/lazyWithRetry.js`), which waits for the connection while offline and retries failed chunk downloads, rendered inside `<Suspense fallback={<RouteFallback />}>`. To add a page, add one registry entry. **Never import a page statically or re-export pages from a barrel**, because that puts it back in the main bundle. Unknown paths redirect to `/`.
 - `ErrorBoundary` (`src/components/common/`) catches render errors and failed chunk loads. A failed chunk reloads the page (automatically once back online), and a render bug resets the boundary in place.
 - `Game/index.jsx` creates the engine in an effect, measures the available space with a `ResizeObserver`, and renders `MobileHud` (below `lg`), `StatsPanel` (`lg` and up) and `GameOverlay` from the latest snapshot. Read `engineRef.current` only inside callbacks or effects, never during render (the react-hooks lint rules enforce this).
-- `Home/index.jsx` is a tabbed menu (level grid, power-ups, shop, leaderboard). Its state is still local and unpersisted, and the leaderboard is mock data.
+- `Home/index.jsx` is a tabbed menu: level grid, power-up info, shop and leaderboard. The leaderboard is still mock data.
+
+### Player store (`src/store/`)
+
+- `playerStore.js` is a Zustand store with `persist`, saved under the `smash-tiles-player` key. It holds coins, `highestCompleted` (level N+1 is unlocked), per-level `{ stars, bestScore }`, the power-up `inventory` (consumables bought in the shop) and `bestCombo`. Change it only through its actions: `recordResult`, `buyPowerUp`, `consumePowerUp` and `resetProgress`. These are the points that will be validated server-side in Phase 2. Use the primitive selectors `selectUnlockedLevel` and `selectTotalScore`. Total score is the sum of each level's best score.
+- `storage.js` is the storage adapter (localStorage, every call wrapped in try/catch). It will be swapped for async Capacitor Preferences on Android, and at that point screens must wait for hydration.
+- `progressRecorder.js` connects the engine to the store. On the transition into `levelComplete` or `gameOver` it calls `recordResult` once. Coins are a running total per run in the engine, so it only adds what hasn't been saved yet. The engine itself never imports the store.
+- Game page: `?level=N` is clamped to the highest unlocked level (read once on mount). The in-game inventory calls `engine.applyPowerUp(id)` and only spends the item if that returns true, which it does only while playing.
 
 ## Known gaps / next steps (Phase 1 roadmap)
 
-- Coins, purchases and level progress aren't persisted and aren't shared between pages. Coins earned in a game never reach the Home page, and power-ups bought in the shop have no effect in the game. A shared store saved to the device comes next.
+- Scoring (in `constants.js`): brick = `BRICK_SCORE × maxHealth × min(combo, MAX_COMBO_MULTIPLIER)`. The combo resets on any paddle hit or lost ball. Damaging a brick without breaking it gives `BRICK_DAMAGE_SCORE`, and a cleared level adds `LIFE_BONUS × lives`. The README's Scoring section documents this for players, so keep the two in sync.
 - Levels beyond 5 repeat patterns. Data-driven level files and special bricks are planned.
 - There is no sound, haptics, settings screen or tutorial yet.
 - Most of the shadcn-style CSS variables in `src/App.css` are unused template leftovers.

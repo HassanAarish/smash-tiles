@@ -1,6 +1,7 @@
 import { ArrowLeft, Coins, Gamepad2, Heart, House, Pause, Play } from "lucide-react";
 import { PowerUpIcon } from "@/components";
-import { POWER_UPS_BY_ID } from "@/game/powerUps";
+import { POWER_UPS, POWER_UPS_BY_ID } from "@/game/powerUps";
+import { usePlayerStore } from "@/store/playerStore";
 
 const speedColor = (boost) =>
   boost > 50 ? "text-red-400" : boost > 20 ? "text-yellow-400" : "text-green-400";
@@ -33,6 +34,39 @@ function ActivePowerUps({ powerUps }) {
           {POWER_UPS_BY_ID[type].name}
           <span className="tabular-nums">{secondsLeft}s</span>
         </span>
+      ))}
+    </div>
+  );
+}
+
+// Power-ups bought in the shop. Tapping one uses it right away (only while playing).
+function PowerUpInventory({ hud, onUse, emptyHint = false }) {
+  const inventory = usePlayerStore((state) => state.inventory);
+  const owned = POWER_UPS.filter(({ id }) => inventory[id] > 0);
+  const canUse = hud.phase === "playing";
+
+  if (owned.length === 0) {
+    return emptyHint ? (
+      <p className="text-sm text-gray-400">Buy power-ups in the shop to use them here.</p>
+    ) : null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {owned.map(({ id, name, color }) => (
+        <button
+          key={id}
+          onClick={() => onUse(id)}
+          disabled={!canUse}
+          aria-label={`Use ${name} (${inventory[id]} left)`}
+          title={name}
+          className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-white bg-linear-to-br ${color} shadow-md transition-transform active:scale-90 disabled:opacity-40 disabled:active:scale-100`}
+        >
+          <PowerUpIcon id={id} size={20} aria-hidden="true" />
+          <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-black/80 text-[11px] font-bold leading-5 tabular-nums">
+            {inventory[id]}
+          </span>
+        </button>
       ))}
     </div>
   );
@@ -80,6 +114,7 @@ export function MobileHud({ hud, actions }) {
           <PauseIcon paused={paused} size={18} />
         </button>
       </div>
+      <PowerUpInventory hud={hud} onUse={actions.spendPowerUp} />
       <ActivePowerUps powerUps={hud.activePowerUps} />
     </header>
   );
@@ -117,8 +152,10 @@ export function StatsPanel({ hud, actions }) {
           <Hearts lives={hud.lives} maxLives={hud.maxLives} size={24} />
         </Stat>
         <Stat label="Combo">
-          <span className={`text-2xl font-bold ${hud.combo > 5 ? "text-orange-400" : ""}`}>
-            {hud.combo}x
+          <span
+            className={`text-2xl font-bold ${hud.comboMultiplier >= 5 ? "text-orange-400" : ""}`}
+          >
+            x{Math.max(1, hud.comboMultiplier)}
           </span>
         </Stat>
         <Stat label="Coins">
@@ -131,6 +168,11 @@ export function StatsPanel({ hud, actions }) {
             +{hud.speedBoost}%
           </span>
         </Stat>
+
+        <div className="border-t border-white/20 pt-4">
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Your Power-ups</h3>
+          <PowerUpInventory hud={hud} onUse={actions.spendPowerUp} emptyHint />
+        </div>
 
         {hud.activePowerUps.length > 0 && (
           <div className="border-t border-white/20 pt-4">

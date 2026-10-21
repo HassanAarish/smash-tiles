@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "@/game/constants";
 import { GameEngine } from "@/game/engine";
 import { attachInput } from "@/game/input";
+import { selectUnlockedLevel, usePlayerStore } from "@/store/playerStore";
+import { createProgressRecorder } from "@/store/progressRecorder";
 import GameOverlay from "./GameOverlay";
 import { MobileHud, StatsPanel } from "./Hud";
 
@@ -14,7 +16,12 @@ const parseLevel = (value) => {
 const Game = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const startLevel = parseLevel(searchParams.get("level"));
+  // Locked levels can't be opened from the URL: clamp to the highest unlocked one.
+  // Read once on mount so unlocking the next level mid-game doesn't restart the engine.
+  const [startLevel] = useState(() =>
+    Math.min(parseLevel(searchParams.get("level")), selectUnlockedLevel(usePlayerStore.getState())),
+  );
+  const consumePowerUp = usePlayerStore((state) => state.consumePowerUp);
 
   const canvasRef = useRef(null);
   const stageRef = useRef(null);
@@ -27,7 +34,11 @@ const Game = () => {
   // Create the engine and its input handlers.
   useEffect(() => {
     const canvas = canvasRef.current;
-    const engine = new GameEngine(canvas, setHud);
+    const recordProgress = createProgressRecorder();
+    const engine = new GameEngine(canvas, (snapshot) => {
+      setHud(snapshot);
+      recordProgress(snapshot);
+    });
     engine.newGame(startLevel);
     engineRef.current = engine;
 
@@ -61,9 +72,14 @@ const Game = () => {
   const actions = {
     play: () => engineRef.current?.play(),
     togglePause: () => engineRef.current?.togglePause(),
-    restart: () => engineRef.current?.newGame(startLevel),
+    // Retry the level the run ended on, not the one it started from.
+    restart: () => engineRef.current?.newGame(engineRef.current.level),
     nextLevel: () => engineRef.current?.nextLevel(),
     home: () => navigate("/"),
+    // Only spend the item if the engine actually applied it (a round is in progress).
+    spendPowerUp: (id) => {
+      if (engineRef.current?.applyPowerUp(id)) consumePowerUp(id);
+    },
   };
 
   return (

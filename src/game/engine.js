@@ -6,7 +6,10 @@ import {
   BALL_TRAIL_LENGTH,
   BASE_BALL_SPEED,
   BRICK_COINS,
+  BRICK_DAMAGE_SCORE,
   BRICK_SCORE,
+  LIFE_BONUS,
+  MAX_COMBO_MULTIPLIER,
   MAX_FRAME_TIME,
   MAX_SPEED_MULTIPLIER,
   PADDLE_HEIGHT,
@@ -163,6 +166,15 @@ export class GameEngine {
     }
   }
 
+  // Use a power-up from the player's inventory. Returns false (and does nothing) unless a
+  // round is in progress, so the caller only spends the item when it actually applied.
+  applyPowerUp(type) {
+    if (this.phase !== "playing") return false;
+    this.activatePowerUp(type);
+    this.emit();
+    return true;
+  }
+
   // Paddle follows this world-space x (mouse / touch drag) until a key is used.
   setPointerX(x) {
     this.input.pointerX = x;
@@ -182,6 +194,7 @@ export class GameEngine {
   loadLevel(level) {
     const { bricks, portals } = buildLevel(level);
     this.level = level;
+    this.levelStartScore = this.score;
     this.bricks = bricks;
     this.portals = portals;
     this.balls = [createBall()];
@@ -191,6 +204,7 @@ export class GameEngine {
     this.paddle = { cx: WORLD_WIDTH / 2, width: PADDLE_WIDTH };
     this.input.pointerX = null;
     this.stars = 0;
+    this.levelBonus = 0;
     this.accumulator = 0;
   }
 
@@ -315,6 +329,7 @@ export class GameEngine {
     const hitPos = clamp((ball.x - this.paddle.cx) / half, -1, 1);
     setVelocity(ball, hitPos * PADDLE_MAX_ANGLE);
     ball.y = PADDLE_Y - ball.radius;
+    this.combo = 0;
 
     if (this.powerUpTimers.has("stickyPaddle")) {
       ball.attached = true;
@@ -373,13 +388,14 @@ export class GameEngine {
     const cy = brick.y + brick.height / 2;
 
     if (brick.health > 0) {
+      this.score += BRICK_DAMAGE_SCORE;
       this.spawnParticles(ball.x, ball.y, brick.color, 5);
       return;
     }
 
     this.bricks.splice(index, 1);
-    this.score += BRICK_SCORE * (this.combo + 1);
     this.combo++;
+    this.score += BRICK_SCORE * brick.maxHealth * Math.min(this.combo, MAX_COMBO_MULTIPLIER);
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.coins += BRICK_COINS;
     this.spawnParticles(cx, cy, brick.color, 15);
@@ -499,6 +515,8 @@ export class GameEngine {
     }
 
     if (this.bricks.length === 0) {
+      this.levelBonus = this.lives * LIFE_BONUS;
+      this.score += this.levelBonus;
       this.stars = clamp(this.lives, 1, 3);
       this.phase = "levelComplete";
     }
@@ -528,6 +546,9 @@ export class GameEngine {
       phase: this.phase,
       level: this.level,
       score: this.score,
+      levelScore: this.score - this.levelStartScore,
+      levelBonus: this.levelBonus,
+      comboMultiplier: Math.min(this.combo, MAX_COMBO_MULTIPLIER),
       lives: this.lives,
       maxLives: this.maxLives,
       coins: this.coins,

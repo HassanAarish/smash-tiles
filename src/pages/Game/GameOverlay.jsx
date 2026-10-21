@@ -73,6 +73,7 @@ export default function GameOverlay({ hud, actions }) {
           <Title icon={Gamepad2} className="text-3xl sm:text-4xl">
             Level {hud.level}
           </Title>
+          <p className="text-2xl font-semibold text-pink-300">{hud.levelName}</p>
           <p className="text-xl text-gray-200">Tap or press Space to start</p>
           <div className="text-gray-400 text-sm space-y-1">
             <Hint icon={Hand}>Drag anywhere to move · Tap to launch</Hint>
@@ -135,6 +136,9 @@ export default function GameOverlay({ hud, actions }) {
           <Title icon={PartyPopper} className="text-4xl text-green-400">
             Level Complete!
           </Title>
+          <p className="text-lg text-gray-300">
+            Level {hud.level}: {hud.levelName}
+          </p>
           <Stars count={hud.stars} />
           <p className="text-xl">Score: {hud.score.toLocaleString()}</p>
           {hud.levelBonus > 0 && (

@@ -8,6 +8,8 @@ import {
   BRICK_COINS,
   BRICK_DAMAGE_SCORE,
   BRICK_SCORE,
+  EXPLOSION_REACH_X,
+  EXPLOSION_REACH_Y,
   LIFE_BONUS,
   MAX_COMBO_MULTIPLIER,
   MAX_FRAME_TIME,
@@ -28,7 +30,7 @@ import {
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./constants";
-import { buildLevel } from "./levels";
+import { buildLevel, motionX } from "./levels";
 import { COIN_RUSH_AMOUNT, POWER_UPS_BY_ID } from "./powerUps";
 import { renderGame } from "./render";
 
@@ -192,11 +194,14 @@ export class GameEngine {
   // ---- Internals ---------------------------------------------------------
 
   loadLevel(level) {
-    const { bricks, portals } = buildLevel(level);
+    const { name, bricks, portals } = buildLevel(level);
     this.level = level;
+    this.levelName = name;
+    this.levelTime = 0;
     this.levelStartScore = this.score;
     this.bricks = bricks;
     this.portals = portals;
+    this.shockwaves = [];
     this.balls = [createBall()];
     this.particles = [];
     this.fallingPowerUps = [];
@@ -230,6 +235,8 @@ export class GameEngine {
   }
 
   step(dt) {
+    this.levelTime += dt;
+    this.updateMovingBricks();
     this.updatePowerUpTimers(dt);
     this.updatePaddle(dt);
     for (const ball of this.balls) this.updateBall(ball, dt);
@@ -240,7 +247,14 @@ export class GameEngine {
     for (const brick of this.bricks) {
       brick.hitAnimation = Math.max(0, brick.hitAnimation - dt * 6);
     }
+    this.shockwaves = this.shockwaves.filter((wave) => (wave.life -= dt * 2.5) > 0);
     this.checkRoundEnd();
+  }
+
+  updateMovingBricks() {
+    for (const brick of this.bricks) {
+      if (brick.motion) brick.x = motionX(brick.motion, this.levelTime);
+    }
   }
 
   updatePowerUpTimers(dt) {
@@ -339,15 +353,14 @@ export class GameEngine {
   }
 
   collideBricks(ball) {
-    // Resolve at most one brick per step; removing it after the search keeps
-    // the array stable while we look.
-    const index = this.bricks.findIndex((brick) => {
-      const closestX = clamp(ball.x, brick.x, brick.x + brick.width);
-      const closestY = clamp(ball.y, brick.y, brick.y + brick.height);
+    // Resolve at most one brick per step; destroyed bricks are filtered out after the
+    // search, so the array stays stable while we look.
+    const brick = this.bricks.find((candidate) => {
+      const closestX = clamp(ball.x, candidate.x, candidate.x + candidate.width);
+      const closestY = clamp(ball.y, candidate.y, candidate.y + candidate.height);
       return (ball.x - closestX) ** 2 + (ball.y - closestY) ** 2 < ball.radius ** 2;
     });
-    if (index === -1) return;
-    const brick = this.bricks[index];
+    if (!brick) return;
 
     // Bounce off the side with the smallest overlap.
     const overlaps = {
@@ -371,7 +384,15 @@ export class GameEngine {
       ball.y = brick.y + brick.height + ball.radius;
     }
 
-    // Every brick bounce makes the ball a little faster.
+    brick.hitAnimation = 1;
+
+    // Steel just deflects: no damage, no points, no speed-up.
+    if (brick.unbreakable) {
+      this.spawnParticles(ball.x, ball.y, brick.color, 4);
+      return;
+    }
+
+    // Every breakable brick bounce makes the ball a little faster.
     ball.bounceCount++;
     const newSpeed = Math.min(
       BASE_BALL_SPEED * (1 + SPEED_INCREMENT * ball.bounceCount),
@@ -383,17 +404,25 @@ export class GameEngine {
     ball.speed = newSpeed;
 
     brick.health--;
-    brick.hitAnimation = 1;
-    const cx = brick.x + brick.width / 2;
-    const cy = brick.y + brick.height / 2;
-
     if (brick.health > 0) {
       this.score += BRICK_DAMAGE_SCORE;
       this.spawnParticles(ball.x, ball.y, brick.color, 5);
       return;
     }
 
-    this.bricks.splice(index, 1);
+    this.breakBrick(brick);
+    // Removed after the whole chain (explosions included) has been resolved.
+    this.bricks = this.bricks.filter((b) => !b.destroyed);
+  }
+
+  // Destroys a breakable brick: scores it, drops its power-up and, for an explosive,
+  // takes out its neighbours too (which can set off further explosives).
+  breakBrick(brick) {
+    if (brick.destroyed || brick.unbreakable) return;
+    brick.destroyed = true;
+
+    const cx = brick.x + brick.width / 2;
+    const cy = brick.y + brick.height / 2;
     this.combo++;
     this.score += BRICK_SCORE * brick.maxHealth * Math.min(this.combo, MAX_COMBO_MULTIPLIER);
     this.maxCombo = Math.max(this.maxCombo, this.combo);
@@ -401,12 +430,19 @@ export class GameEngine {
     this.spawnParticles(cx, cy, brick.color, 15);
 
     if (brick.powerUp) {
-      this.fallingPowerUps.push({
-        x: cx,
-        y: cy,
-        type: brick.powerUp,
-        color: brick.color,
-      });
+      this.fallingPowerUps.push({ x: cx, y: cy, type: brick.powerUp, color: brick.color });
+    }
+    if (brick.type === "explosive") this.explode(cx, cy);
+  }
+
+  explode(x, y) {
+    this.shockwaves.push({ x, y, life: 1 });
+    this.spawnParticles(x, y, "#ffb020", 24);
+    for (const other of this.bricks) {
+      if (other.destroyed || other.unbreakable) continue;
+      const dx = Math.abs(other.x + other.width / 2 - x);
+      const dy = Math.abs(other.y + other.height / 2 - y);
+      if (dx <= EXPLOSION_REACH_X && dy <= EXPLOSION_REACH_Y) this.breakBrick(other);
     }
   }
 
@@ -514,7 +550,8 @@ export class GameEngine {
       this.balls.push(createBall({ x: this.paddle.cx }));
     }
 
-    if (this.bricks.length === 0) {
+    // Steel never has to be cleared.
+    if (!this.bricks.some((brick) => !brick.unbreakable)) {
       this.levelBonus = this.lives * LIFE_BONUS;
       this.score += this.levelBonus;
       this.stars = clamp(this.lives, 1, 3);
@@ -547,6 +584,7 @@ export class GameEngine {
       level: this.level,
       score: this.score,
       levelScore: this.score - this.levelStartScore,
+      levelName: this.levelName,
       levelBonus: this.levelBonus,
       comboMultiplier: Math.min(this.combo, MAX_COMBO_MULTIPLIER),
       lives: this.lives,

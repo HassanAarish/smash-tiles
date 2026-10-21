@@ -1,4 +1,5 @@
 import { PADDLE_HEIGHT, PADDLE_Y, POWER_UP_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from "./constants";
+import { Bomb } from "lucide";
 import { POWER_UPS_BY_ID } from "./powerUps";
 
 // Self-hosted via @fontsource-variable/fredoka (loaded in App.css).
@@ -69,24 +70,115 @@ function drawBricks(ctx, bricks) {
     ctx.scale(scale, scale);
     ctx.translate(-cx, -cy);
 
-    ctx.globalAlpha = 0.5 + (brick.health / brick.maxHealth) * 0.5;
-    ctx.fillStyle = brick.color;
-    ctx.beginPath();
-    ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
-    ctx.fill();
+    if (brick.type === "steel") drawSteelBrick(ctx, brick);
+    else if (brick.type === "explosive") drawExplosiveBrick(ctx, brick, cx, cy);
+    else drawNormalBrick(ctx, brick, cy);
 
-    // Crack for damaged bricks
-    if (brick.health < brick.maxHealth) {
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(brick.x + brick.width * 0.3, brick.y);
-      ctx.lineTo(brick.x + brick.width * 0.55, cy);
-      ctx.lineTo(brick.x + brick.width * 0.7, brick.y + brick.height);
-      ctx.stroke();
-    }
     ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawNormalBrick(ctx, brick, cy) {
+  ctx.globalAlpha = 0.5 + (brick.health / brick.maxHealth) * 0.5;
+  ctx.fillStyle = brick.color;
+  ctx.beginPath();
+  ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
+  ctx.fill();
+
+  // Tougher bricks get an inner outline per extra hit they can take.
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i < brick.health; i++) {
+    const inset = i * 3.5;
+    ctx.beginPath();
+    ctx.roundRect(
+      brick.x + inset,
+      brick.y + inset,
+      brick.width - inset * 2,
+      brick.height - inset * 2,
+      3,
+    );
+    ctx.stroke();
+  }
+
+  // Crack for damaged bricks
+  if (brick.health < brick.maxHealth) {
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "#000";
+    ctx.beginPath();
+    ctx.moveTo(brick.x + brick.width * 0.3, brick.y);
+    ctx.lineTo(brick.x + brick.width * 0.55, cy);
+    ctx.lineTo(brick.x + brick.width * 0.7, brick.y + brick.height);
+    ctx.stroke();
+  }
+}
+
+function drawSteelBrick(ctx, brick) {
+  const gradient = ctx.createLinearGradient(0, brick.y, 0, brick.y + brick.height);
+  gradient.addColorStop(0, "#c9d1de");
+  gradient.addColorStop(0.5, brick.color);
+  gradient.addColorStop(1, "#5d6678");
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 3);
+  ctx.fill();
+
+  // Rivets in the corners
+  ctx.fillStyle = "#3d4454";
+  for (const [rx, ry] of [
+    [brick.x + 5, brick.y + 5],
+    [brick.x + brick.width - 5, brick.y + 5],
+    [brick.x + 5, brick.y + brick.height - 5],
+    [brick.x + brick.width - 5, brick.y + brick.height - 5],
+  ]) {
+    ctx.beginPath();
+    ctx.arc(rx, ry, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawExplosiveBrick(ctx, brick, cx, cy) {
+  const pulse = 0.5 + Math.sin(performance.now() * 0.008) * 0.5;
+  ctx.shadowColor = brick.color;
+  ctx.shadowBlur = 6 + pulse * 10;
+  ctx.fillStyle = brick.color;
+  ctx.beginPath();
+  ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Hazard stripes
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
+  ctx.clip();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "#1a1a1a";
+  for (let x = brick.x - brick.height; x < brick.x + brick.width; x += 12) {
+    ctx.beginPath();
+    ctx.moveTo(x, brick.y + brick.height);
+    ctx.lineTo(x + 6, brick.y + brick.height);
+    ctx.lineTo(x + 6 + brick.height, brick.y);
+    ctx.lineTo(x + brick.height, brick.y);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  const icon = getIconImage("bomb", Bomb);
+  if (icon) ctx.drawImage(icon, cx - 8, cy - 8, 16, 16);
+}
+
+function drawShockwaves(ctx, shockwaves) {
+  for (const wave of shockwaves) {
+    const progress = 1 - wave.life;
+    ctx.globalAlpha = wave.life * 0.8;
+    ctx.strokeStyle = "#ffb020";
+    ctx.lineWidth = 4 * wave.life + 1;
+    ctx.beginPath();
+    ctx.arc(wave.x, wave.y, 15 + progress * 70, 0, Math.PI * 2);
+    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
@@ -96,10 +188,10 @@ function drawBricks(ctx, bricks) {
 const POWER_UP_ICON_SIZE = 16;
 const iconImages = new Map();
 
-function getIconImage(type) {
+function getIconImage(key, iconNode) {
   if (typeof Image === "undefined") return null;
-  if (!iconImages.has(type)) {
-    const children = POWER_UPS_BY_ID[type].icon
+  if (!iconImages.has(key)) {
+    const children = iconNode
       .map(([tag, attrs]) => {
         const attributes = Object.entries(attrs)
           .map(([name, value]) => `${name}="${value}"`)
@@ -110,9 +202,9 @@ function getIconImage(type) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">${children}</svg>`;
     const image = new Image();
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    iconImages.set(type, image);
+    iconImages.set(key, image);
   }
-  const image = iconImages.get(type);
+  const image = iconImages.get(key);
   return image.complete && image.naturalWidth > 0 ? image : null;
 }
 
@@ -128,7 +220,7 @@ function drawFallingPowerUps(ctx, powerUps) {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    const icon = getIconImage(powerUp.type);
+    const icon = getIconImage(powerUp.type, POWER_UPS_BY_ID[powerUp.type].icon);
     if (icon) {
       const half = POWER_UP_ICON_SIZE / 2;
       ctx.drawImage(
@@ -215,6 +307,7 @@ export function renderGame(ctx, state, scale) {
   drawParticles(ctx, state.particles);
   drawPortals(ctx, state.portals);
   drawBricks(ctx, state.bricks);
+  drawShockwaves(ctx, state.shockwaves);
   drawFallingPowerUps(ctx, state.fallingPowerUps);
   drawBalls(ctx, state.balls);
   drawPaddle(ctx, state.paddle);

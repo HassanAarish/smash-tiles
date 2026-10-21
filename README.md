@@ -11,7 +11,8 @@ A modern Breakout-style brick breaker for the web and Android. Break every tile 
 - Touch, mouse and keyboard controls
 - Pauses automatically when you switch tabs or apps
 - Six power-ups: Multi-Ball, Wide Paddle, Slow Motion, Sticky Paddle, Extra Life, Coin Rush
-- Five brick patterns, tougher bricks on later levels, and teleport portals from level 3
+- 40 hand-made levels, then endless remixes with tougher bricks
+- Special bricks: tough (2–3 hits), steel (unbreakable), explosive (chain reactions), plus moving rows and teleport portals
 - Combo scoring, coins, a 3-star rating per level, and a speed boost of 1.5% per brick hit
 - Progress saved on the device: coins, unlocked levels, best score and stars per level
 - Shop: spend coins on power-ups, then use them during a level from the in-game inventory
@@ -85,7 +86,8 @@ src/
 │   ├── engine.js         # GameEngine: state, game loop, physics, collisions
 │   ├── render.js         # Canvas drawing
 │   ├── input.js          # Mouse, touch, keyboard, auto-pause
-│   ├── levels.js         # Brick patterns and level generation
+│   ├── levelData.js      # The 40 levels as text grids (edit here to add levels)
+│   ├── levels.js         # Builds levels from the data, remixes, validation
 │   ├── powerUps.js       # Power-up definitions (shared with the shop)
 │   └── constants.js      # Playfield size, speeds, tuning values
 ├── pages/
@@ -115,7 +117,7 @@ src/
 
 ## Roadmap
 
-1. **Finish the game:** ~~saved player progress~~ (done), more levels and special bricks, sound and haptics, settings, and a tutorial
+1. **Finish the game:** ~~saved player progress~~ and ~~levels and special bricks~~ (done), sound and haptics, settings, and a tutorial
 2. **Backend (Firebase):** accounts, cloud saves synced across web and Android, a real leaderboard, server-side validation of scores and coins
 3. **Android app (Capacitor):** native packaging, ads and in-app purchases
 4. **Release:** web hosting and Google Play Store

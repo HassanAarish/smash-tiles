@@ -36,7 +36,8 @@ There are two layers: a framework-free game engine in `src/game/` and React page
 - Phases: `menu` → `playing` ⇄ `paused` → `levelComplete` | `gameOver`. UI commands are `newGame(level)`, `play()`, `pause()`, `togglePause()`, `launch()`, `nextLevel()`, `setPointerX()` and `setKey()`.
 - All coordinates are in a fixed **600×840 portrait world** (`constants.js`). The canvas is scaled to fit by `resize()`, which accounts for devicePixelRatio. Gameplay code never deals with screen pixels.
 - `render.js` is a set of pure drawing functions that read engine state. `input.js` connects mouse (absolute follow), touch (relative drag, tap to launch) and keyboard, and auto-pauses on blur or when the page is hidden.
-- `levels.js`: `buildLevel(n)` cycles through five brick patterns. Brick health scales with the level, and portals appear from level 3.
+- **Levels are data.** `levelData.js` holds the 40 hand-made levels as text grids with one row per line (`.` empty, `1`–`3` hits, `#` steel, `X` explosive), plus optional per-row `moving` and `portals`. The file is `prettier-ignore`d so the grids stay readable. `levels.js` builds them: `buildLevel(n)`, `getLevelDefinition(n)` (after level 40 it remixes levels 11–40 with tougher bricks, forever), `motionX` for moving rows, which are clamped to stay on screen. `validateLevels()` checks width, characters and that no breakable brick is sealed in by steel. It runs automatically in dev and logs problems to the console.
+- Brick types: `steel` (`unbreakable`) only deflects and doesn't count toward clearing. `explosive` calls `breakBrick` on everything within `EXPLOSION_REACH_X/Y` (its 8 neighbours), which chains, and each brick counts toward the combo. Bricks are marked `destroyed` during a chain and filtered out afterwards.
 - `powerUps.js` is the **single source of truth** for power-up IDs, names, icons, prices and durations. Both the engine and the Home page shop import it.
 - Brick collisions resolve at most one brick per ball per step, and `enforceMinAngle` stops the ball from looping straight vertically or horizontally. When removing entities, use `filter` or `splice` after the search, never in the middle of a `forEach`.
 
@@ -58,6 +59,6 @@ There are two layers: a framework-free game engine in `src/game/` and React page
 ## Known gaps / next steps (Phase 1 roadmap)
 
 - Scoring (in `constants.js`): brick = `BRICK_SCORE × maxHealth × min(combo, MAX_COMBO_MULTIPLIER)`. The combo resets on any paddle hit or lost ball. Damaging a brick without breaking it gives `BRICK_DAMAGE_SCORE`, and a cleared level adds `LIFE_BONUS × lives`. The README's Scoring section documents this for players, so keep the two in sync.
-- Levels beyond 5 repeat patterns. Data-driven level files and special bricks are planned.
+- Level difficulty still needs real playtesting. In autopilot runs, Zigzag (15), Grand Wall (30) and Labyrinth (38) take about 6–7 minutes.
 - There is no sound, haptics, settings screen or tutorial yet.
 - Most of the shadcn-style CSS variables in `src/App.css` are unused template leftovers.

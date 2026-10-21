@@ -29,7 +29,7 @@ export const BALL_TRAIL_LENGTH = 14;
 export const BALL_MIN_HORIZONTAL = 0.15;
 export const BALL_MIN_VERTICAL = 0.3;
 
-export const BRICK_ROWS = 6;
+export const MAX_ROWS = 12; // most rows a level layout may have
 export const BRICK_COLS = 10;
 export const BRICK_HEIGHT = 22;
 export const BRICK_GAP = 4;
@@ -52,6 +52,10 @@ export const POWER_UP_DROP_CHANCE = 0.15;
 export const POWER_UP_FALL_SPEED = 150;
 export const POWER_UP_SIZE = { width: 30, height: 20 };
 
-export const PORTALS_FROM_LEVEL = 3;
 export const PORTAL_RADIUS = 30;
 export const PORTAL_COOLDOWN = 1; // seconds
+
+// Explosive bricks destroy every brick whose centre is within one grid cell (the 8
+// neighbours). Kept slightly over a cell so moving rows still count as neighbours.
+export const EXPLOSION_REACH_X = BRICK_WIDTH + BRICK_GAP + 2;
+export const EXPLOSION_REACH_Y = BRICK_HEIGHT + BRICK_GAP + 2;

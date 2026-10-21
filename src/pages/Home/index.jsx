@@ -1,6 +1,31 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CircleCheck,
+  Coins,
+  Gamepad2,
+  Heart,
+  Lock,
+  Play,
+  ShoppingCart,
+  Star,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import { PowerUpIcon } from "@/components";
+import { POWER_UPS } from "@/game/powerUps";
+
+const TABS = [
+  { id: "menu", label: "Game Menu", icon: Gamepad2 },
+  { id: "powerups", label: "Power-Ups", icon: Zap },
+  { id: "shop", label: "Shop", icon: ShoppingCart },
+  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+];
 
 const Home = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("menu");
   const [playerStats, setPlayerStats] = useState({
     totalScore: 0,
@@ -16,58 +41,6 @@ const Home = () => {
   });
 
   const [purchasedPowerUps, setPurchasedPowerUps] = useState(new Set());
-
-  // Power-up information
-  const powerUpInfo = [
-    {
-      id: "multiball",
-      name: "Multi-Ball",
-      icon: "🔴",
-      description: "Splits your ball into 3 balls",
-      price: 100,
-      color: "from-red-500 to-orange-500",
-    },
-    {
-      id: "widePaddle",
-      name: "Wide Paddle",
-      icon: "🛡️",
-      description: "Increases paddle width by 50%",
-      price: 50,
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      id: "slowBall",
-      name: "Slow Motion",
-      icon: "⏰",
-      description: "Slows down ball speed temporarily",
-      price: 75,
-      color: "from-green-500 to-emerald-500",
-    },
-    {
-      id: "stickyPaddle",
-      name: "Sticky Paddle",
-      icon: "💝",
-      description: "Ball sticks to paddle on impact",
-      price: 60,
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      id: "extraLife",
-      name: "Extra Life",
-      icon: "❤️",
-      description: "Gain an additional life",
-      price: 150,
-      color: "from-red-500 to-pink-500",
-    },
-    {
-      id: "coins",
-      name: "Coin Rush",
-      icon: "🪙",
-      description: "Instant bonus of 50 coins",
-      price: 25,
-      color: "from-yellow-500 to-amber-500",
-    },
-  ];
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -104,7 +77,7 @@ const Home = () => {
   const handleLevelSelect = (level) => {
     if (level <= playerStats.highestLevel + 1) {
       // Navigate to game with selected level
-      window.location.href = `#/game?level=${level}`;
+      navigate(`/game?level=${level}`);
     }
   };
 
@@ -123,37 +96,35 @@ const Home = () => {
     <div className="min-h-screen bg-linear-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Header */}
       <header className="bg-black/30 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="text-4xl">🎮</div>
+              <Gamepad2 size={40} aria-hidden="true" className="text-pink-500" />
               <div>
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-linear-to-r from-pink-500 to-purple-500">
                   Smash Tiles
                 </h1>
-                <p className="text-gray-300">
-                  Ultimate Brick Breaker Challenge
-                </p>
+                <p className="text-gray-300">Ultimate Brick Breaker Challenge</p>
               </div>
             </div>
 
             {/* Player Stats */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Total Score</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-lg sm:text-2xl font-bold text-white">
                   {playerStats.totalScore.toLocaleString()}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Coins</p>
-                <p className="text-2xl font-bold text-yellow-400">
-                  {playerStats.totalCoins} 🪙
+                <p className="inline-flex items-center gap-1.5 text-lg sm:text-2xl font-bold text-yellow-400">
+                  {playerStats.totalCoins} <Coins className="size-[0.9em]" aria-hidden="true" />
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Highest Level</p>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-lg sm:text-2xl font-bold text-green-400">
                   {playerStats.highestLevel}
                 </p>
               </div>
@@ -165,24 +136,19 @@ const Home = () => {
       {/* Navigation Tabs */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1">
-            {[
-              { id: "menu", label: "Game Menu", icon: "🎮" },
-              { id: "powerups", label: "Power-Ups", icon: "⚡" },
-              { id: "shop", label: "Shop", icon: "🛒" },
-              { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
-            ].map((tab) => (
+          <div className="flex gap-1 overflow-x-auto">
+            {TABS.map(({ id, label, icon: Icon }) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 font-semibold transition-all ${
-                  activeTab === tab.id
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`shrink-0 inline-flex items-center gap-2 whitespace-nowrap px-4 sm:px-6 py-3 font-semibold transition-all ${
+                  activeTab === id
                     ? "bg-white/20 text-white border-b-2 border-purple-500"
                     : "text-gray-400 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <Icon size={18} aria-hidden="true" />
+                {label}
               </button>
             ))}
           </div>
@@ -190,14 +156,12 @@ const Home = () => {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Game Menu Tab */}
         {activeTab === "menu" && (
           <div className="space-y-8">
-            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8">
-              <h2 className="text-3xl font-bold text-white mb-6">
-                Level Selection
-              </h2>
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 sm:p-8">
+              <h2 className="text-3xl font-bold text-white mb-6">Level Selection</h2>
 
               {/* Current Progress */}
               <div className="bg-black/30 rounded-2xl p-6 mb-8">
@@ -205,15 +169,17 @@ const Home = () => {
                   <div>
                     <p className="text-gray-300">Current Progress</p>
                     <p className="text-2xl font-bold text-white">
-                      Level {playerStats.currentLevel} - Group{" "}
-                      {currentLevelGroup}
+                      Level {playerStats.currentLevel} - Group {currentLevelGroup}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     {Array.from({ length: 3 }).map((_, i) => (
-                      <span key={i} className="text-3xl text-red-500">
-                        ❤️
-                      </span>
+                      <Heart
+                        key={i}
+                        size={28}
+                        aria-hidden="true"
+                        className="text-red-500 fill-red-500"
+                      />
                     ))}
                   </div>
                 </div>
@@ -230,7 +196,7 @@ const Home = () => {
               </div>
 
               {/* Level Grid */}
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-5 gap-2 sm:gap-4">
                 {levelGrid.map((level) => (
                   <button
                     key={level.number}
@@ -240,13 +206,13 @@ const Home = () => {
                       level.isLocked
                         ? "bg-gray-800/50 text-gray-600 cursor-not-allowed"
                         : level.isCompleted
-                        ? "bg-linear-to-br from-green-600 to-emerald-600 text-white shadow-lg"
-                        : "bg-linear-to-br from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl"
+                          ? "bg-linear-to-br from-green-600 to-emerald-600 text-white shadow-lg"
+                          : "bg-linear-to-br from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl"
                     }`}
                   >
                     {level.isLocked && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl">🔒</span>
+                        <Lock size={24} aria-label={`Level ${level.number} locked`} />
                       </div>
                     )}
                     {!level.isLocked && (
@@ -255,16 +221,16 @@ const Home = () => {
                         {level.isCompleted && (
                           <div className="flex gap-1">
                             {Array.from({ length: 3 }).map((_, i) => (
-                              <span
+                              <Star
                                 key={i}
-                                className={`text-sm ${
+                                size={14}
+                                aria-hidden="true"
+                                className={
                                   i < level.stars
-                                    ? "text-yellow-400"
+                                    ? "text-yellow-400 fill-yellow-400"
                                     : "text-gray-600"
-                                }`}
-                              >
-                                ⭐
-                              </span>
+                                }
+                              />
                             ))}
                           </div>
                         )}
@@ -275,18 +241,24 @@ const Home = () => {
               </div>
 
               {/* Navigation Arrows */}
-              <div className="flex justify-between items-center mt-8">
+              <div className="flex flex-wrap justify-between items-center gap-3 mt-8">
                 <button
                   disabled={currentLevelGroup === 1}
-                  className="px-6 py-3 bg-linear-to-r from-blue-500 to-purple-500 text-white rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-600 hover:to-purple-600 transition-all"
+                  className="inline-flex items-center gap-1 px-6 py-3 bg-linear-to-r from-blue-500 to-purple-500 text-white rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-600 hover:to-purple-600 transition-all"
                 >
-                  ← Previous Group
+                  <ChevronLeft size={20} aria-hidden="true" />
+                  Previous Group
                 </button>
-                <button className="px-8 py-4 bg-linear-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg">
-                  🎮 Start Game
+                <button
+                  onClick={() => handleLevelSelect(playerStats.currentLevel)}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-linear-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg"
+                >
+                  <Play size={20} aria-hidden="true" className="fill-current" />
+                  Start Game
                 </button>
-                <button className="px-6 py-3 bg-linear-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all">
-                  Next Group →
+                <button className="inline-flex items-center gap-1 px-6 py-3 bg-linear-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all">
+                  Next Group
+                  <ChevronRight size={20} aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -295,24 +267,20 @@ const Home = () => {
 
         {/* Power-ups Tab */}
         {activeTab === "powerups" && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8">
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Power-Up Information
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {powerUpInfo.map((powerUp) => (
+          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 sm:p-8">
+            <h2 className="text-3xl font-bold text-white mb-6">Power-Up Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+              {POWER_UPS.map((powerUp) => (
                 <div
                   key={powerUp.id}
                   className="bg-black/30 rounded-2xl p-6 hover:bg-black/40 transition-all"
                 >
                   <div
-                    className={`text-4xl mb-3 bg-linear-to-r ${powerUp.color} bg-clip-text text-transparent`}
+                    className={`inline-flex p-3 mb-3 rounded-xl text-white bg-linear-to-br ${powerUp.color}`}
                   >
-                    {powerUp.icon}
+                    <PowerUpIcon id={powerUp.id} size={28} aria-hidden="true" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    {powerUp.name}
-                  </h3>
+                  <h3 className="text-xl font-bold text-white mb-2">{powerUp.name}</h3>
                   <p className="text-gray-300 text-sm">{powerUp.description}</p>
                 </div>
               ))}
@@ -322,57 +290,55 @@ const Home = () => {
 
         {/* Shop Tab */}
         {activeTab === "shop" && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8">
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Power-Up Shop
-            </h2>
+          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 sm:p-8">
+            <h2 className="text-3xl font-bold text-white mb-6">Power-Up Shop</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {powerUpInfo.map((powerUp) => {
+              {POWER_UPS.map((powerUp) => {
                 const isPurchased = purchasedPowerUps.has(powerUp.id);
                 return (
                   <div key={powerUp.id} className="bg-black/30 rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`text-3xl bg-linear-to-r ${powerUp.color} bg-clip-text text-transparent`}
+                          className={`shrink-0 p-2.5 rounded-xl text-white bg-linear-to-br ${powerUp.color}`}
                         >
-                          {powerUp.icon}
+                          <PowerUpIcon id={powerUp.id} size={24} aria-hidden="true" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold text-white">
-                            {powerUp.name}
-                          </h3>
-                          <p className="text-gray-300 text-sm">
-                            {powerUp.description}
-                          </p>
+                          <h3 className="text-xl font-bold text-white">{powerUp.name}</h3>
+                          <p className="text-gray-300 text-sm">{powerUp.description}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-yellow-400">
-                          {powerUp.price} 🪙
+                        <p className="inline-flex items-center gap-1.5 text-2xl font-bold text-yellow-400">
+                          {powerUp.price} <Coins size={20} aria-hidden="true" />
                         </p>
                       </div>
                     </div>
                     <button
-                      onClick={() =>
-                        handlePurchasePowerUp(powerUp.id, powerUp.price)
-                      }
-                      disabled={
-                        isPurchased || playerStats.totalCoins < powerUp.price
-                      }
-                      className={`w-full px-4 py-3 rounded-xl font-semibold transition-all ${
+                      onClick={() => handlePurchasePowerUp(powerUp.id, powerUp.price)}
+                      disabled={isPurchased || playerStats.totalCoins < powerUp.price}
+                      className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
                         isPurchased
                           ? "bg-green-600/30 text-green-400 cursor-not-allowed"
                           : playerStats.totalCoins < powerUp.price
-                          ? "bg-gray-600/30 text-gray-500 cursor-not-allowed"
-                          : `bg-linear-to-r ${powerUp.color} text-white hover:shadow-lg transform hover:scale-105`
+                            ? "bg-gray-600/30 text-gray-500 cursor-not-allowed"
+                            : `bg-linear-to-r ${powerUp.color} text-white hover:shadow-lg transform hover:scale-105`
                       }`}
                     >
-                      {isPurchased
-                        ? "✅ Purchased"
-                        : playerStats.totalCoins < powerUp.price
-                        ? "❌ Insufficient Coins"
-                        : "🛒 Purchase"}
+                      {isPurchased ? (
+                        <>
+                          <CircleCheck size={18} aria-hidden="true" /> Purchased
+                        </>
+                      ) : playerStats.totalCoins < powerUp.price ? (
+                        <>
+                          <Lock size={18} aria-hidden="true" /> Insufficient Coins
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart size={18} aria-hidden="true" /> Purchase
+                        </>
+                      )}
                     </button>
                   </div>
                 );
@@ -383,10 +349,8 @@ const Home = () => {
 
         {/* Leaderboard Tab */}
         {activeTab === "leaderboard" && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8">
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Global Leaderboard
-            </h2>
+          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 sm:p-8">
+            <h2 className="text-3xl font-bold text-white mb-6">Global Leaderboard</h2>
             <div className="space-y-4">
               {leaderboardData.map((player) => (
                 <div
@@ -399,18 +363,16 @@ const Home = () => {
                         player.rank === 1
                           ? "bg-linear-to-r from-yellow-500 to-amber-500 text-white"
                           : player.rank === 2
-                          ? "bg-linear-to-r from-gray-400 to-gray-500 text-white"
-                          : player.rank === 3
-                          ? "bg-linear-to-r from-amber-700 to-amber-800 text-white"
-                          : "bg-purple-600/30 text-purple-300"
+                            ? "bg-linear-to-r from-gray-400 to-gray-500 text-white"
+                            : player.rank === 3
+                              ? "bg-linear-to-r from-amber-700 to-amber-800 text-white"
+                              : "bg-purple-600/30 text-purple-300"
                       }`}
                     >
                       {player.rank}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">
-                        {player.name}
-                      </h3>
+                      <h3 className="text-xl font-bold text-white">{player.name}</h3>
                       <p className="text-gray-400">Level {player.level}</p>
                     </div>
                   </div>

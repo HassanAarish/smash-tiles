@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "@fontsource-variable/fredoka";
+
+@theme {
+  --font-sans: "Fredoka Variable", ui-sans-serif, system-ui, sans-serif;
+}
 
 :root {
   --background: 0 0% 100%;
